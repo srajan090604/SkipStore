@@ -1,0 +1,11 @@
+# Ignore Windows Executables
+*.exe
+*.o
+*.obj
+
+# Ignore Database Logs & Files
+wal.log
+sst_*.csv
+
+# Ignore VS Code settings
+.vscode/

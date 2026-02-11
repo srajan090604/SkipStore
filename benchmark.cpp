@@ -1,9 +1,9 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <cstdlib> // rand()
-#include <ctime>   // time()
-#include <chrono>  // High-resolution clock
+#include <cstdlib>
+#include <ctime>
+#include <chrono>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
@@ -12,9 +12,8 @@
 #define SERVER_IP "127.0.0.1"
 #define PORT 8080
 #define BUFFER_SIZE 1024
-#define REQUEST_COUNT 10000 // How many keys to write
+#define REQUEST_COUNT 10000
 
-// Helper to generate random string
 std::string randomString(int length)
 {
     std::string str = "";
@@ -28,7 +27,6 @@ std::string randomString(int length)
 
 int main()
 {
-    // 1. Initialize Winsock
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
     {
@@ -36,7 +34,6 @@ int main()
         return 1;
     }
 
-    // 2. Create Socket
     SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock == INVALID_SOCKET)
     {
@@ -45,7 +42,6 @@ int main()
         return 1;
     }
 
-    // 3. Connect to Server
     sockaddr_in serv_addr;
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(PORT);
@@ -62,7 +58,6 @@ int main()
     char buffer[BUFFER_SIZE];
     srand(time(0));
 
-    // 4. Start Timer
     auto start = std::chrono::high_resolution_clock::now();
 
     for (int i = 0; i < REQUEST_COUNT; i++)
@@ -70,18 +65,13 @@ int main()
         std::string key = "key_" + std::to_string(i);
         std::string value = randomString(8);
 
-        // Command: "SET key value"
         std::string command = "SET " + key + " " + value;
 
-        // Send
         send(sock, command.c_str(), command.length(), 0);
 
-        // Receive "OK" (Synchronous blocking)
-        // We must read the response to keep the protocol in sync!
         recv(sock, buffer, BUFFER_SIZE, 0);
     }
 
-    // 5. Stop Timer
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> diff = end - start;
 
@@ -89,7 +79,6 @@ int main()
     std::cout << "Time Taken: " << diff.count() << " seconds\n";
     std::cout << "Throughput: " << (REQUEST_COUNT / diff.count()) << " requests/second\n";
 
-    // Cleanup
     closesocket(sock);
     WSACleanup();
     return 0;

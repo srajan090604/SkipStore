@@ -1,4 +1,4 @@
-#pragma once // Prevents "redefinition" errors
+#pragma once
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -8,11 +8,8 @@
 #include <chrono>
 #include <functional>
 #include <cstdio>
-#include "SkipList.h" // Import your new Brain
+#include "SkipList.h"
 
-// ==========================================
-// PART 1: The Bloom Filter (No Changes)
-// ==========================================
 class BloomFilter
 {
 private:
@@ -48,22 +45,15 @@ struct SSTableEntry
     BloomFilter filter;
 };
 
-// ==========================================
-// PART 2: The Key-Value Store (Updated)
-// ==========================================
 class KVStore
 {
 private:
-    // 1. Memory Table (RAM) -> NOW A SKIP LIST
     SkipList memTable;
 
-    // We need a manual counter because SkipList doesn't track size automatically yet
     int memTableSize = 0;
 
-    // 2. The Log File
     const std::string wal_file = "wal.log";
 
-    // 3. List of flushed files
     std::vector<SSTableEntry> sstList;
 
     void appendToWAL(const std::string &key, const std::string &value)
@@ -103,7 +93,6 @@ private:
     }
 
 public:
-    // --- Constructor: Crash Recovery ---
     KVStore()
     {
         std::cout << "[System] Checking WAL for crash recovery...\n";
@@ -121,7 +110,6 @@ public:
                 std::string key = line.substr(0, delimiterPos);
                 std::string value = line.substr(delimiterPos + 1);
 
-                // CHANGE 1: Use insert() instead of []
                 memTable.insert(key, value);
                 memTableSize++;
                 count++;
@@ -130,35 +118,28 @@ public:
         std::cout << "[System] Recovered " << count << " items from WAL.\n";
     }
 
-    // --- PUT: Write Data ---
     void put(const std::string &key, const std::string &value)
     {
         appendToWAL(key, value);
 
-        // CHANGE 2: Use insert() instead of []
         memTable.insert(key, value);
         memTableSize++;
 
-        // CHANGE 3: Check our manual size counter
         if (memTableSize > 2000)
         {
             flush();
         }
     }
 
-    // --- GET: Read Data ---
     std::string get(const std::string &key)
     {
-        // CHANGE 4: Use search() instead of count/[]
-        // SkipList returns "" if not found
         std::string val = memTable.search(key);
 
         if (val != "")
         {
-            return val; // Found in RAM
+            return val;
         }
 
-        // Check Disk (Same as before)
         for (auto it = sstList.rbegin(); it != sstList.rend(); ++it)
         {
             if (!it->filter.mightContain(key))
@@ -173,7 +154,6 @@ public:
         return "Key not found";
     }
 
-    // --- FLUSH: Move RAM to Disk ---
     void flush()
     {
         if (memTable.isEmpty())
@@ -183,7 +163,6 @@ public:
         std::ofstream file(filename);
         BloomFilter filter;
 
-        // CHANGE 5: Use getAll() because we can't loop over SkipList directly
         auto allData = memTable.getAll();
 
         for (const auto &pair : allData)
@@ -196,16 +175,13 @@ public:
         sstList.push_back({filename, filter});
         std::cout << "[System] Flushed to " << filename << "\n";
 
-        // Reset
         memTable.clear();
-        memTableSize = 0; // Reset our counter!
+        memTableSize = 0;
 
         std::ofstream wal(wal_file, std::ios::trunc);
         wal.close();
     }
 
-    // --- COMPACT: Merge Files (No Changes Needed Here!) ---
-    // We stick with std::map here because it's just for temporary sorting
     void compact()
     {
         if (sstList.empty())
